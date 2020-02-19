@@ -1,0 +1,20 @@
+CC	= gcc
+CFLAGS	= -O1 -g -Ilibps `pkg-config --cflags sdl2`
+LINKER	=  `pkg-config --libs sdl2`
+RM	= rm
+
+PROG	= yaroid
+OBJS	= asteroid.o images.o libps/libps.o
+
+all: $(PROG)
+
+$(PROG): $(OBJS)
+	$(CC) $(LINKER) -o $@ $(OBJS)
+
+asteroid.o: asteroid.c
+images.o: images.c
+
+clean:
+	$(RM) $(PROG) 
+	$(RM) $(OBJS)
+
