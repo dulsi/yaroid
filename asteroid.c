@@ -214,6 +214,7 @@ int YTitleScreen()
   GsSwapDispBuff();
   while ((!YStartPress(pad)) && (!YSelectPress(pad)))
   {
+   VSync(0);
    pad = YReadControl(0);
   }
   if (YSelectPress(pad))
@@ -242,6 +243,7 @@ void startwait()
 
  while (!(YStartPress(padd)))
  {
+  VSync(0);
   padd = YReadControl(0);
  }
 }
