@@ -1,11 +1,19 @@
 #include <libps.h>
 #include <SDL.h>
+#include <SDL_image.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 #define GPU_FASTSPRITE 1
 #define GPU_CLEAR 2
+
+typedef struct {
+ int size;
+ int x, y;
+ int w, h;
+ char *content;
+} FontStream;
 
 static unsigned char buf[20];
 static SDL_Window *mainWindow;
@@ -14,6 +22,8 @@ static u_long timerTicksIncrement;
 static u_long timerStop;
 static PACKET *workBase;
 static PACKET *workEnd;
+static SDL_Texture *fntTex;
+static FontStream fntStream[8];
 
 struct dload_list {
  unsigned long *addr;
@@ -63,7 +73,7 @@ void GsInitGraph(int w, int h, int intl, int dither, int vram)
                            SDL_WINDOWPOS_UNDEFINED,
                            w,
                            h,
-                           /*(fullScreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0)*/0);
+                           /*(fullScreen ? SDL_WINDOW_FULLSCREEN : 0)*/0);
  if (mainWindow == NULL)
  {
   printf("Failed - SDL_CreateWindow\n");
@@ -250,22 +260,6 @@ void GsGetTimInfo(unsigned long *addr, GsIMAGE *img)
     }
     else if (img->pmode == 1)
     {
- /*    for (int index = 0; index < 256; index++)
-     {
-       Uint32 temp;
-       Uint8 red, green, blue, alpha;
-       temp = ((Uint8*)img->clut)[index * 2] + (((Uint32)((Uint8*)img->clut)[index * 2 + 1]) << 8);
-       red = (temp & 0x001F) << 3;
-       green = ((temp & 0x03F0) >> 5) << 3;
-       blue = ((temp & 0x7C00) >> 10) << 3;
-       alpha = 255;
-       if (temp & 0x8000)
-       {
-       }
-       else if ((red == 0) && (green == 0) && (blue == 0))
-        alpha = 0;
-       printf("Pal: %d %d %d %d\n", red, green, blue, alpha);
-     }*/
      for (int y = 0; y < img->ph; y++)
      {
       for (int x = 0; x < img->pw * 2; x++)
@@ -354,10 +348,32 @@ void GetPadBuf(volatile unsigned char **buf1, volatile unsigned char **buf2)
 
 void FntLoad(int tx, int ty)
 {
+ SDL_Surface *fnt = IMG_Load("libps/font.png");
+ fntTex = SDL_CreateTextureFromSurface(mainRenderer, fnt);
+ SDL_FreeSurface(fnt);
+ for (int i = 0; i < 8; i++)
+ {
+  fntStream[0].size = 0;
+  fntStream[0].content = 0;
+ }
 }
 
 int FntOpen(int x, int y, int w, int h, int isbg, int n)
 {
+ int i;
+ for (i = 0; i < 7; i++)
+ {
+  if (fntStream[i].content == NULL)
+   break;
+ }
+ fntStream[i].x = x;
+ fntStream[i].y = y;
+ fntStream[i].w = w;
+ fntStream[i].h = h;
+ fntStream[i].size = n;
+ fntStream[i].content = malloc((n + 1) * sizeof(char));
+ fntStream[i].content[0] = 0;
+ return i;
 }
 
 int GsGetActiveBuff()
@@ -410,6 +426,11 @@ void GsSortClear(unsigned char r, unsigned char g, unsigned char b, GsOT *otp)
 
 int FntPrint(int num, ...)
 {
+ va_list valist;
+ va_start(valist, num);
+ char *s = va_arg(valist, char *);
+ vsprintf(fntStream[num].content, s, valist);
+ va_end(valist);
 }
 
 int DrawSync(int mode)
@@ -494,6 +515,34 @@ void GsDrawOt(GsOT *otp)
 
 u_long *FntFlush(int id)
 {
+ if (fntStream[id].content[0] == 0)
+  return 0;
+ int h = 8;
+ int w = 8;
+ SDL_Rect destrect;
+ SDL_Rect srcrect;
+ destrect.w = w;
+ destrect.h = h;
+ destrect.y = fntStream[id].y;
+ srcrect.w = 8;
+ srcrect.h = 8;
+ int x = fntStream[id].x;
+ for (int i = 0; fntStream[id].content[i]; i++)
+ {
+  if ('\n' == fntStream[id].content[i])
+  {
+   x = fntStream[id].x;
+   destrect.y += h;
+  }
+  else
+  {
+   destrect.x = x;
+   x += w;
+   srcrect.x = 8 * ((fntStream[id].content[i] - 1) % 16);
+   srcrect.y = 8 * ((fntStream[id].content[i] - 1) / 16);
+   SDL_RenderCopy(mainRenderer, fntTex, &srcrect, &destrect);
+  }
+ }
 }
 
 int VSync(int mode)

@@ -1,6 +1,6 @@
 CC	= gcc
-CFLAGS	= -O1 -g -Ilibps `pkg-config --cflags sdl2`
-LINKER	=  `pkg-config --libs sdl2`
+CFLAGS	= -O1 -g -Ilibps `pkg-config --cflags sdl2 SDL2_image`
+LINKER	=  `pkg-config --libs sdl2 SDL2_image`
 RM	= rm
 
 PROG	= yaroid
