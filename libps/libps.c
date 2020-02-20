@@ -538,8 +538,16 @@ u_long *FntFlush(int id)
   {
    destrect.x = x;
    x += w;
-   srcrect.x = 8 * ((fntStream[id].content[i] - 1) % 16);
-   srcrect.y = 8 * ((fntStream[id].content[i] - 1) / 16);
+   if (('a' <= fntStream[id].content[i]) && (fntStream[id].content[i] <= 'z'))
+   {
+    srcrect.x = 8 * ((fntStream[id].content[i] - 'a' + 'A' - 1) % 16);
+    srcrect.y = 8 * ((fntStream[id].content[i] - 'a' + 'A' - 1) / 16);
+   }
+   else
+   {
+    srcrect.x = 8 * ((fntStream[id].content[i] - 1) % 16);
+    srcrect.y = 8 * ((fntStream[id].content[i] - 1) / 16);
+   }
    SDL_RenderCopy(mainRenderer, fntTex, &srcrect, &destrect);
   }
  }
