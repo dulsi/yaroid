@@ -3,6 +3,7 @@ local dload ships.tim     80096940
 local dload newroid.tim   80096E00
 local dload clasroid.tim  80097360
 local dload others.tim    800978E0
+local dload newships.tim  80097B40
 local load yaroid
 go
 

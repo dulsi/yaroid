@@ -3,7 +3,7 @@
 unsigned long *YImagePtrs[Y_NUMIMAGES] =
 {
  /* Title Screen */      (unsigned long *)0x80090004,
- /* Ships */             (unsigned long *)0x80096944,
+ /* Ships */             (unsigned long *)0x80097B44,
  /* Asteroids */         (unsigned long *)0x80096E04,
  /* Explosion */         (unsigned long *)0x800978E4,
  /* Classic Ships */     (unsigned long *)0x80096944,

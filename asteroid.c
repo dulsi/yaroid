@@ -8,6 +8,8 @@
 
 #define IRANDOM(x) (rand()%x)
 
+#define IMAGEDUMP 0x80090000
+
 /* Global Variables */
 GsOT WorldOT[2];
 GsOT_TAG OTTags[2][1 << OT_LENGTH];
@@ -40,6 +42,10 @@ signed short shot_range[16][2]={{160,0},{129,53},{79,79},{37,89},{0,92},
   {37,89},{79,79},{129,53},{160,0},{129,53},{79,79},{37,89},{0,92},
   {37,89},{79,79},{129,53}};
 signed short init_asteroids[MAX_LEVEL]={6,7,8};
+
+#ifdef IMAGEGRAB
+RECT imageGrab;
+#endif
 
 void YInitialize();
 int YTitleScreen();
@@ -216,6 +222,17 @@ int YTitleScreen()
   {
    VSync(0);
    pad = YReadControl(0);
+#ifdef IMAGEGRAB
+   if (YL1Press(pad))
+   {
+    imageGrab.x = 0;
+    imageGrab.y = activeBuff ? 240 : 0;
+    imageGrab.w = 320;
+    imageGrab.h = 240;
+    StoreImage(&imageGrab, (u_long *)IMAGEDUMP);
+    DrawSync(0);
+   }
+#endif
   }
   if (YSelectPress(pad))
   {
@@ -296,7 +313,7 @@ void play_game()
 
  shotcount=0;
  movecount=0;
- while (player.lives>0)
+ while (player.lives > 0)
  {
   if (movecount++==moveturn)
   {
@@ -305,7 +322,8 @@ void play_game()
    for (i=0;i<num_asteroids;i++)
    {
     move_sprite(asteroids+i);
-    if (check_collision(&player.spinfo,asteroids+i))
+    if ((player.spinfo.picnum != NOTHING) &&
+      (check_collision(&player.spinfo,asteroids+i)))
     {
      destroy_asteroid(i);
      dead_player();
@@ -364,106 +382,88 @@ void action_player()
  int i;
  signed char r;
 
- u_long padd = YReadControl(0);
- r = 0;
- if (YLeftHeld(padd)) r = -1;
- if (YRightHeld(padd)) r = 1;
- if (r)
+ if (player.spinfo.picnum == NOTHING)
  {
-  player.spinfo.picnum+=16-r;
-  player.spinfo.picnum%=16;
-  player.spinfo.sp.u=player.spinfo.picnum*12;
- }
- player.spinfo.vx-=(player.spinfo.vx>>4)+((player.spinfo.vx-(player.spinfo.vx>>4<<4))?1:0)*((player.spinfo.vx<0)?-1:1);
- player.spinfo.vy-=(player.spinfo.vy>>4)+((player.spinfo.vy-(player.spinfo.vy>>4<<4))?1:0)*((player.spinfo.vy<0)?-1:1);
- if (YUpHeld(padd))
- {
-  player.spinfo.vx+=acceleration[player.spinfo.picnum][0];
-  player.spinfo.vy+=acceleration[player.spinfo.picnum][1];
- }
- else if (YDownHeld(padd))
- {
-  player.spinfo.vx=player.spinfo.vy=player.spinfo.rx=player.spinfo.ry=0;
-  player.spinfo.sp.x=IRANDOM(320);
-  player.spinfo.sp.y=IRANDOM(185);
- }
- if (YSquarePress(padd))
- {
-  for (i=0;(i<MAX_SHOTS) && (shots[i].spinfo.picnum!=NOTHING);i++) ;
-  if (i<MAX_SHOTS)
+  if (!check_center())
   {
-   shots[i].spinfo.picnum=20;
-   shots[i].spinfo.sp.tpage=YTPage[YMode + EXPLOSIONIMAGE];
-   shots[i].spinfo.sp.cx=YImages[3].cx;
-   shots[i].spinfo.sp.cy=YImages[3].cy;
-   shots[i].spinfo.sp.x=player.spinfo.sp.x+shot_start[player.spinfo.picnum][0];
-   shots[i].spinfo.sp.y=player.spinfo.sp.y+shot_start[player.spinfo.picnum][1];
-   shots[i].spinfo.sp.w=apics[20].x;
-   shots[i].spinfo.sp.h=apics[20].y;
-   shots[i].spinfo.sp.u=apics[20].u;
-   shots[i].spinfo.sp.v=apics[20].v;
-   shots[i].spinfo.sp.r=shots[i].spinfo.sp.g=shots[i].spinfo.sp.b=0x80;
-   shots[i].spinfo.sp.mx=0;
-   shots[i].spinfo.sp.my=0;
-   shots[i].spinfo.sp.scalex=1;
-   shots[i].spinfo.sp.scaley=1;
-   shots[i].spinfo.sp.rotate=0;
-   shots[i].spinfo.vx=acceleration[player.spinfo.picnum][0]*16;
-   shots[i].spinfo.vy=acceleration[player.spinfo.picnum][1]*16;
-   shots[i].spinfo.rx=shots[i].spinfo.ry=0;
-   shots[i].range[0]=shot_range[player.spinfo.picnum][0];
-   shots[i].range[1]=shot_range[player.spinfo.picnum][1];
+   player.spinfo.sp.x=STARTX;
+   player.spinfo.sp.y=STARTY;
+   player.spinfo.vx=player.spinfo.vy=player.spinfo.rx=player.spinfo.ry=0;
+   player.spinfo.picnum=4;
+   player.spinfo.sp.u = apics[4].u;
   }
+ }
+ else
+ {
+  u_long padd = YReadControl(0);
+  r = 0;
+  if (YLeftHeld(padd)) r = -1;
+  if (YRightHeld(padd)) r = 1;
+  if (r)
+  {
+   player.spinfo.picnum+=16-r;
+   player.spinfo.picnum%=16;
+   player.spinfo.sp.u=player.spinfo.picnum*12;
+  }
+  player.spinfo.vx-=(player.spinfo.vx>>4)+((player.spinfo.vx-(player.spinfo.vx>>4<<4))?1:0)*((player.spinfo.vx<0)?-1:1);
+  player.spinfo.vy-=(player.spinfo.vy>>4)+((player.spinfo.vy-(player.spinfo.vy>>4<<4))?1:0)*((player.spinfo.vy<0)?-1:1);
+  if (YUpHeld(padd))
+  {
+   player.spinfo.vx+=acceleration[player.spinfo.picnum][0];
+   player.spinfo.vy+=acceleration[player.spinfo.picnum][1];
+  }
+  else if (YDownHeld(padd))
+  {
+   player.spinfo.vx=player.spinfo.vy=player.spinfo.rx=player.spinfo.ry=0;
+   player.spinfo.sp.x=IRANDOM(320);
+   player.spinfo.sp.y=IRANDOM(185);
+  }
+  if (YSquarePress(padd))
+  {
+   for (i=0;(i<MAX_SHOTS) && (shots[i].spinfo.picnum!=NOTHING);i++) ;
+   if (i<MAX_SHOTS)
+   {
+    shots[i].spinfo.picnum=20;
+    shots[i].spinfo.sp.tpage=YTPage[YMode + EXPLOSIONIMAGE];
+    shots[i].spinfo.sp.cx=YImages[3].cx;
+    shots[i].spinfo.sp.cy=YImages[3].cy;
+    shots[i].spinfo.sp.x=player.spinfo.sp.x+shot_start[player.spinfo.picnum][0];
+    shots[i].spinfo.sp.y=player.spinfo.sp.y+shot_start[player.spinfo.picnum][1];
+    shots[i].spinfo.sp.w=apics[20].x;
+    shots[i].spinfo.sp.h=apics[20].y;
+    shots[i].spinfo.sp.u=apics[20].u;
+    shots[i].spinfo.sp.v=apics[20].v;
+    shots[i].spinfo.sp.r=shots[i].spinfo.sp.g=shots[i].spinfo.sp.b=0x80;
+    shots[i].spinfo.sp.mx=0;
+    shots[i].spinfo.sp.my=0;
+    shots[i].spinfo.sp.scalex=1;
+    shots[i].spinfo.sp.scaley=1;
+    shots[i].spinfo.sp.rotate=0;
+    shots[i].spinfo.vx=acceleration[player.spinfo.picnum][0]*16;
+    shots[i].spinfo.vy=acceleration[player.spinfo.picnum][1]*16;
+    shots[i].spinfo.rx=shots[i].spinfo.ry=0;
+    shots[i].range[0]=shot_range[player.spinfo.picnum][0];
+    shots[i].range[1]=shot_range[player.spinfo.picnum][1];
+   }
+  }
+#ifdef IMAGEGRAB
+  if (YL1Press(padd))
+  {
+   imageGrab.x = 0;
+   imageGrab.y = activeBuff ? 240 : 0;
+   imageGrab.w = 320;
+   imageGrab.h = 240;
+   StoreImage(&imageGrab, (u_long *)IMAGEDUMP);
+   DrawSync(0);
+  }
+#endif
  }
 }
 
 void dead_player()
 {
- int i,k;
-
- player.spinfo.picnum=NOTHING;
- if (--player.lives>0)
- {
-  movecount=0;
-  draw_screen();
-  while (check_center())
-  {
-   if (movecount++==moveturn)
-   {
-    for (i=0;i<num_asteroids;i++)
-    {
-     move_sprite(asteroids+i);
-    }
-    movecount=0;
-   }
-   if (shotcount++==shotturn)
-   {
-    for (i=0;i<MAX_SHOTS;i++)
-     if (shots[i].spinfo.picnum!=NOTHING)
-     {
-      shots[i].range[0]-=abs((shots[i].spinfo.rx+shots[i].spinfo.vx)/128);
-      shots[i].range[1]-=abs((shots[i].spinfo.ry+shots[i].spinfo.vy)/128);
-      move_sprite(&shots[i].spinfo);
-      for (k=0;k<num_asteroids;k++)
-       if (check_collision(&shots[i].spinfo,asteroids+k))
-       {
-        shots[i].spinfo.picnum=NOTHING;
-        destroy_asteroid(k);
-        k=num_asteroids;
-       }
-      if (shots[i].range[0]<1 && shots[i].range[1]<1)
-       shots[i].spinfo.picnum=NOTHING;
-     }
-    shotcount=0;
-   }
-   if (movecount==0 || shotcount==0) draw_screen();
-  }
-  player.spinfo.sp.x=STARTX;
-  player.spinfo.sp.y=STARTY;
-  player.spinfo.vx=player.spinfo.vy=player.spinfo.rx=player.spinfo.ry=0;
-  player.spinfo.picnum=4;
-  player.spinfo.sp.u = apics[4].u;
- }
+ player.spinfo.picnum = NOTHING;
+ --player.lives;
 }
 
 void add_asteroid(unsigned char picnum,signed short x,signed short y,
